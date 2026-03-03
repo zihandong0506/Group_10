@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我们的 Firebase 团队项目</title>
+    <title>Our Firebase Team Project</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -38,38 +38,38 @@
         .toggle-text:hover { text-decoration: underline; }
         .success-msg { color: #0f9d58; font-weight: bold; background: #e6f4ea; padding: 10px; border-radius: 4px; }
         
-        /* 控制视图切换的 CSS 类 */
+        /* CSS class to control view toggling */
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>团队数据库项目</h1>
+        <h1>Team Database Project</h1>
 
         <div id="authView">
-            <h2 id="formTitle">用户登录</h2>
+            <h2 id="formTitle">User Login</h2>
             
             <div class="input-group">
-                <input type="email" id="emailInput" placeholder="输入邮箱地址" required>
+                <input type="email" id="emailInput" placeholder="Enter email address" required>
             </div>
             <div class="input-group">
-                <input type="password" id="passwordInput" placeholder="输入密码 (至少6位)" required>
+                <input type="password" id="passwordInput" placeholder="Enter password (min 6 characters)" required>
             </div>
             
-            <button id="mainAuthBtn" class="btn btn-primary">登录</button>
-            <p class="toggle-text" id="toggleModeBtn">没有账号？点击这里注册</p>
+            <button id="mainAuthBtn" class="btn btn-primary">Login</button>
+            <p class="toggle-text" id="toggleModeBtn">Don't have an account? Click here to register</p>
             
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
             
-            <button id="googleLoginBtn" class="btn btn-google">使用 Google 账号继续</button>
+            <button id="googleLoginBtn" class="btn btn-google">Continue with Google</button>
         </div>
 
         <div id="successView" class="hidden">
-            <h2>🎉 登录成功！</h2>
-            <p class="success-msg">欢迎进入系统，您的数据已同步。</p>
+            <h2>🎉 Login Successful!</h2>
+            <p class="success-msg">Welcome to the system. Your data has been synchronized.</p>
             <div id="userInfo" style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; word-break: break-all;">
                 </div>
-            <button id="logoutBtn" class="btn btn-danger">退出登录</button>
+            <button id="logoutBtn" class="btn btn-danger">Logout</button>
         </div>
 
     </div>
@@ -83,7 +83,6 @@
         } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // ⚠️ 务必替换为你自己的真实配置！
          const firebaseConfig = {
             apiKey: "AIzaSyC3BrcypGhOEqP9wvu4PnBFlDmTmtKdFXc",
             authDomain: "group-10-570d5.firebaseapp.com",
@@ -97,7 +96,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 获取 DOM 元素
+        // Get DOM elements
         const authView = document.getElementById('authView');
         const successView = document.getElementById('successView');
         const formTitle = document.getElementById('formTitle');
@@ -109,39 +108,39 @@
         const logoutBtn = document.getElementById('logoutBtn');
         const userInfoDiv = document.getElementById('userInfo');
 
-        let isLoginMode = true; // 记录当前是登录模式还是注册模式
+        let isLoginMode = true; // Tracks whether current mode is login or register
 
-        // 切换 登录/注册 UI
+        // Toggle Login/Register UI
         toggleModeBtn.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
             if (isLoginMode) {
-                formTitle.innerText = "用户登录";
-                mainAuthBtn.innerText = "登录";
-                toggleModeBtn.innerText = "没有账号？点击这里注册";
+                formTitle.innerText = "User Login";
+                mainAuthBtn.innerText = "Login";
+                toggleModeBtn.innerText = "Don't have an account? Click here to register";
             } else {
-                formTitle.innerText = "创建新账号";
-                mainAuthBtn.innerText = "注册";
-                toggleModeBtn.innerText = "已有账号？点击这里登录";
+                formTitle.innerText = "Create New Account";
+                mainAuthBtn.innerText = "Register";
+                toggleModeBtn.innerText = "Already have an account? Click here to login";
             }
         });
 
-        // 监听系统级登录状态变化 (这是最核心的单页面视图切换逻辑)
+        // Listen for system-level authentication state changes
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // 用户已登录：隐藏表单，显示成功页面
+                // User is signed in: hide auth form, show success view
                 authView.classList.add('hidden');
                 successView.classList.remove('hidden');
                 
-                // 动态注入用户数据
+                // Dynamically inject user data
                 userInfoDiv.innerHTML = `
-                    <p><strong>邮箱:</strong> ${user.email || '未提供'}</p>
+                    <p><strong>Email:</strong> ${user.email || 'Not provided'}</p>
                     <p><strong>UID:</strong> ${user.uid}</p>
                 `;
                 
-                // 确保数据库中有该用户记录
+                // Ensure user record exists in database
                 saveUserToDatabase(user);
             } else {
-                // 用户未登录：显示表单，隐藏成功页面
+                // User is signed out: show auth form, hide success view
                 authView.classList.remove('hidden');
                 successView.classList.add('hidden');
                 emailInput.value = '';
@@ -149,7 +148,7 @@
             }
         });
 
-        // 封装向 Firestore 写入数据的函数
+        // Function to write data to Firestore
         async function saveUserToDatabase(user) {
             try {
                 const userDocRef = doc(db, "users", user.uid);
@@ -157,44 +156,44 @@
                     email: user.email,
                     lastLoginTime: new Date().toISOString()
                 }, { merge: true });
-                console.log("数据库记录已同步");
+                console.log("Database record synchronized.");
             } catch (error) {
-                console.error("写入数据库失败:", error);
+                console.error("Failed to write to database:", error);
             }
         }
 
-        // 1. 邮箱 注册/登录 按钮点击事件
+        // 1. Email Register/Login button click event
         mainAuthBtn.addEventListener('click', () => {
             const email = emailInput.value;
             const password = passwordInput.value;
             
             if (!email || !password) {
-                alert("请输入邮箱和密码！");
+                alert("Please enter both email and password!");
                 return;
             }
 
             if (isLoginMode) {
-                // 执行登录
+                // Execute login
                 signInWithEmailAndPassword(auth, email, password)
-                    .catch((error) => alert("登录失败: " + error.message));
+                    .catch((error) => alert("Login failed: " + error.message));
             } else {
-                // 执行注册
+                // Execute registration
                 createUserWithEmailAndPassword(auth, email, password)
-                    .catch((error) => alert("注册失败: " + error.message));
+                    .catch((error) => alert("Registration failed: " + error.message));
             }
         });
 
-        // 2. Google 登录事件
+        // 2. Google login event
         googleLoginBtn.addEventListener('click', () => {
             const provider = new GoogleAuthProvider();
             signInWithPopup(auth, provider)
-                .catch((error) => alert("Google 登录失败: " + error.message));
+                .catch((error) => alert("Google login failed: " + error.message));
         });
 
-        // 3. 退出登录事件
+        // 3. Logout event
         logoutBtn.addEventListener('click', () => {
-            signOut(auth).catch((error) => console.error("退出失败:", error));
+            signOut(auth).catch((error) => console.error("Logout failed:", error));
         });
     </script>
 </body>
-</html> 
+</html>
