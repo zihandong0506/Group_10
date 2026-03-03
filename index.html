@@ -28,6 +28,7 @@
             border-radius: 4px;
         }
         button:hover { background-color: #357ae8; }
+        .success-msg { color: #0f9d58; margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -42,16 +43,16 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // ⚠️ 注意：这里需要替换为你自己在 Firebase 控制台生成的配置对象！
+        // ⚠️ 务必将下方大括号内的内容，替换为你在 Firebase 控制台获取的真实配置！
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyC3BrcypGhOEqP9wvu4PnBFlDmTmtKdFXc",
+            authDomain: "group-10-570d5.firebaseapp.com",
+            projectId: "group-10-570d5",
+            storageBucket: "group-10-570d5.firebasestorage.app",
+            messagingSenderId: "330776905308",
+            appId: "1:330776905308:web:251f0f1584e25925070899"
         };
 
         // 初始化 Firebase
@@ -59,24 +60,36 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 登录逻辑处理
+        // 登录与数据库交互逻辑
         const loginBtn = document.getElementById('loginBtn');
         if (loginBtn) {
             loginBtn.addEventListener('click', () => {
                 const provider = new GoogleAuthProvider();
+                
                 signInWithPopup(auth, provider)
-                    .then((result) => {
+                    .then(async (result) => {
                         const user = result.user;
                         console.log("登录成功！用户 UID:", user.uid);
-                        // 登录成功后更新页面 UI
+                        
+                        // 登录成功后，在 Firestore 中创建/更新该用户的专属数据文档
+                        // 集合名称为 "users"，文档 ID 为用户的唯一 uid
+                        const userDocRef = doc(db, "users", user.uid);
+                        await setDoc(userDocRef, {
+                            name: user.displayName,
+                            email: user.email,
+                            lastLoginTime: new Date().toISOString()
+                        }, { merge: true }); // merge: true 保证如果之前有数据不会被完全覆盖
+
+                        // 更新页面 UI 显示
                         document.getElementById('app').innerHTML = `
                             <h2>欢迎回来, ${user.displayName}!</h2>
                             <p>你的唯一用户 ID (UID) 是: <strong>${user.uid}</strong></p>
-                            <p>接下来我们可以在这里通过这个 UID 从 Firestore 获取属于你的数据。</p>
+                            <p class="success-msg">✅ 你的基础信息已经成功写入/更新到 Firestore 数据库的专属文档中了！</p>
+                            <p>你可以去 Firebase 控制台的 Firestore Database 里查看新生成的数据。</p>
                         `;
                     }).catch((error) => {
                         console.error("登录失败，错误信息:", error);
-                        alert("登录失败，请查看控制台报错。");
+                        alert("登录失败，请查看浏览器控制台报错。");
                     });
             });
         }
