@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我们的 Firebase 团队项目</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            padding: 40px; 
+            background-color: #f4f4f9;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button { 
+            padding: 10px 20px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            background-color: #4285F4; 
+            color: white; 
+            border: none; 
+            border-radius: 4px;
+        }
+        button:hover { background-color: #357ae8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>团队数据库项目</h1>
+        <div id="app">
+            <p>请登录以访问您的专属数据：</p>
+            <button id="loginBtn">使用 Google 登录</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // ⚠️ 注意：这里需要替换为你自己在 Firebase 控制台生成的配置对象！
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // 登录逻辑处理
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', () => {
+                const provider = new GoogleAuthProvider();
+                signInWithPopup(auth, provider)
+                    .then((result) => {
+                        const user = result.user;
+                        console.log("登录成功！用户 UID:", user.uid);
+                        // 登录成功后更新页面 UI
+                        document.getElementById('app').innerHTML = `
+                            <h2>欢迎回来, ${user.displayName}!</h2>
+                            <p>你的唯一用户 ID (UID) 是: <strong>${user.uid}</strong></p>
+                            <p>接下来我们可以在这里通过这个 UID 从 Firestore 获取属于你的数据。</p>
+                        `;
+                    }).catch((error) => {
+                        console.error("登录失败，错误信息:", error);
+                        alert("登录失败，请查看控制台报错。");
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
