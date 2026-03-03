@@ -11,42 +11,80 @@
             background-color: #f4f4f9;
         }
         .container { 
-            max-width: 600px; 
+            max-width: 500px; 
             margin: 0 auto; 
             background: white; 
             padding: 30px; 
             border-radius: 8px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        button { 
-            padding: 10px 20px; 
-            font-size: 16px; 
-            cursor: pointer; 
-            background-color: #4285F4; 
-            color: white; 
-            border: none; 
-            border-radius: 4px;
+        h1, h2 { text-align: center; color: #333; }
+        .input-group { margin-bottom: 15px; }
+        .input-group input { 
+            width: 100%; padding: 10px; box-sizing: border-box; 
+            border: 1px solid #ccc; border-radius: 4px; font-size: 16px;
         }
-        button:hover { background-color: #357ae8; }
-        .success-msg { color: #0f9d58; margin-top: 15px; font-weight: bold; }
+        .btn { 
+            width: 100%; padding: 12px; font-size: 16px; cursor: pointer; 
+            color: white; border: none; border-radius: 4px; margin-bottom: 10px;
+        }
+        .btn-primary { background-color: #007bff; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-google { background-color: #4285F4; }
+        .btn-google:hover { background-color: #357ae8; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        .toggle-text { text-align: center; color: #007bff; cursor: pointer; font-size: 14px; }
+        .toggle-text:hover { text-decoration: underline; }
+        .success-msg { color: #0f9d58; font-weight: bold; background: #e6f4ea; padding: 10px; border-radius: 4px; }
+        
+        /* 控制视图切换的 CSS 类 */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>团队数据库项目</h1>
-        <div id="app">
-            <p>请登录以访问您的专属数据：</p>
-            <button id="loginBtn">使用 Google 登录</button>
+
+        <div id="authView">
+            <h2 id="formTitle">用户登录</h2>
+            
+            <div class="input-group">
+                <input type="email" id="emailInput" placeholder="输入邮箱地址" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="passwordInput" placeholder="输入密码 (至少6位)" required>
+            </div>
+            
+            <button id="mainAuthBtn" class="btn btn-primary">登录</button>
+            <p class="toggle-text" id="toggleModeBtn">没有账号？点击这里注册</p>
+            
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+            
+            <button id="googleLoginBtn" class="btn btn-google">使用 Google 账号继续</button>
         </div>
+
+        <div id="successView" class="hidden">
+            <h2>🎉 登录成功！</h2>
+            <p class="success-msg">欢迎进入系统，您的数据已同步。</p>
+            <div id="userInfo" style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; word-break: break-all;">
+                </div>
+            <button id="logoutBtn" class="btn btn-danger">退出登录</button>
+        </div>
+
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { 
+            getAuth, signInWithPopup, GoogleAuthProvider, 
+            createUserWithEmailAndPassword, signInWithEmailAndPassword, 
+            onAuthStateChanged, signOut 
+        } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // ⚠️ 务必将下方大括号内的内容，替换为你在 Firebase 控制台获取的真实配置！
-        const firebaseConfig = {
+        // ⚠️ 务必替换为你自己的真实配置！
+         const firebaseConfig = {
             apiKey: "AIzaSyC3BrcypGhOEqP9wvu4PnBFlDmTmtKdFXc",
             authDomain: "group-10-570d5.firebaseapp.com",
             projectId: "group-10-570d5",
@@ -55,44 +93,108 @@
             appId: "1:330776905308:web:251f0f1584e25925070899"
         };
 
-        // 初始化 Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 登录与数据库交互逻辑
-        const loginBtn = document.getElementById('loginBtn');
-        if (loginBtn) {
-            loginBtn.addEventListener('click', () => {
-                const provider = new GoogleAuthProvider();
-                
-                signInWithPopup(auth, provider)
-                    .then(async (result) => {
-                        const user = result.user;
-                        console.log("登录成功！用户 UID:", user.uid);
-                        
-                        // 登录成功后，在 Firestore 中创建/更新该用户的专属数据文档
-                        // 集合名称为 "users"，文档 ID 为用户的唯一 uid
-                        const userDocRef = doc(db, "users", user.uid);
-                        await setDoc(userDocRef, {
-                            name: user.displayName,
-                            email: user.email,
-                            lastLoginTime: new Date().toISOString()
-                        }, { merge: true }); // merge: true 保证如果之前有数据不会被完全覆盖
+        // 获取 DOM 元素
+        const authView = document.getElementById('authView');
+        const successView = document.getElementById('successView');
+        const formTitle = document.getElementById('formTitle');
+        const emailInput = document.getElementById('emailInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const mainAuthBtn = document.getElementById('mainAuthBtn');
+        const toggleModeBtn = document.getElementById('toggleModeBtn');
+        const googleLoginBtn = document.getElementById('googleLoginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfoDiv = document.getElementById('userInfo');
 
-                        // 更新页面 UI 显示
-                        document.getElementById('app').innerHTML = `
-                            <h2>欢迎回来, ${user.displayName}!</h2>
-                            <p>你的唯一用户 ID (UID) 是: <strong>${user.uid}</strong></p>
-                            <p class="success-msg">✅ 你的基础信息已经成功写入/更新到 Firestore 数据库的专属文档中了！</p>
-                            <p>你可以去 Firebase 控制台的 Firestore Database 里查看新生成的数据。</p>
-                        `;
-                    }).catch((error) => {
-                        console.error("登录失败，错误信息:", error);
-                        alert("登录失败，请查看浏览器控制台报错。");
-                    });
-            });
+        let isLoginMode = true; // 记录当前是登录模式还是注册模式
+
+        // 切换 登录/注册 UI
+        toggleModeBtn.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            if (isLoginMode) {
+                formTitle.innerText = "用户登录";
+                mainAuthBtn.innerText = "登录";
+                toggleModeBtn.innerText = "没有账号？点击这里注册";
+            } else {
+                formTitle.innerText = "创建新账号";
+                mainAuthBtn.innerText = "注册";
+                toggleModeBtn.innerText = "已有账号？点击这里登录";
+            }
+        });
+
+        // 监听系统级登录状态变化 (这是最核心的单页面视图切换逻辑)
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // 用户已登录：隐藏表单，显示成功页面
+                authView.classList.add('hidden');
+                successView.classList.remove('hidden');
+                
+                // 动态注入用户数据
+                userInfoDiv.innerHTML = `
+                    <p><strong>邮箱:</strong> ${user.email || '未提供'}</p>
+                    <p><strong>UID:</strong> ${user.uid}</p>
+                `;
+                
+                // 确保数据库中有该用户记录
+                saveUserToDatabase(user);
+            } else {
+                // 用户未登录：显示表单，隐藏成功页面
+                authView.classList.remove('hidden');
+                successView.classList.add('hidden');
+                emailInput.value = '';
+                passwordInput.value = '';
+            }
+        });
+
+        // 封装向 Firestore 写入数据的函数
+        async function saveUserToDatabase(user) {
+            try {
+                const userDocRef = doc(db, "users", user.uid);
+                await setDoc(userDocRef, {
+                    email: user.email,
+                    lastLoginTime: new Date().toISOString()
+                }, { merge: true });
+                console.log("数据库记录已同步");
+            } catch (error) {
+                console.error("写入数据库失败:", error);
+            }
         }
+
+        // 1. 邮箱 注册/登录 按钮点击事件
+        mainAuthBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            if (!email || !password) {
+                alert("请输入邮箱和密码！");
+                return;
+            }
+
+            if (isLoginMode) {
+                // 执行登录
+                signInWithEmailAndPassword(auth, email, password)
+                    .catch((error) => alert("登录失败: " + error.message));
+            } else {
+                // 执行注册
+                createUserWithEmailAndPassword(auth, email, password)
+                    .catch((error) => alert("注册失败: " + error.message));
+            }
+        });
+
+        // 2. Google 登录事件
+        googleLoginBtn.addEventListener('click', () => {
+            const provider = new GoogleAuthProvider();
+            signInWithPopup(auth, provider)
+                .catch((error) => alert("Google 登录失败: " + error.message));
+        });
+
+        // 3. 退出登录事件
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth).catch((error) => console.error("退出失败:", error));
+        });
     </script>
 </body>
-</html>
+</html> 
