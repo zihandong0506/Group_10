@@ -2,74 +2,263 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Our Firebase Team Project</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Doormazon - Second Hand Market</title>
     <style>
-        body { 
+        /* Base reset */
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            width: 100%;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            padding: 40px; 
-            background-color: #f4f4f9;
+            background-color: #f0f2f5; 
         }
-        .container { 
-            max-width: 500px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 30px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+
+        /* App container - Now explicitly full screen */
+        .app-container { 
+            width: 100%; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            background: white;
+            position: relative;
+        }
+
+        /* --- Auth View Styles --- */
+        #authView { 
+            padding: 40px; 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center;
+            overflow-y: auto;
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 400px; /* Keep login form narrow even on desktop */
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
         h1, h2 { text-align: center; color: #333; }
         .input-group { margin-bottom: 15px; }
         .input-group input { 
-            width: 100%; padding: 10px; box-sizing: border-box; 
-            border: 1px solid #ccc; border-radius: 4px; font-size: 16px;
+            width: 100%; padding: 12px; box-sizing: border-box; 
+            border: 1px solid #ccc; border-radius: 8px; font-size: 16px;
         }
         .btn { 
-            width: 100%; padding: 12px; font-size: 16px; cursor: pointer; 
-            color: white; border: none; border-radius: 4px; margin-bottom: 10px;
+            width: 100%; padding: 14px; font-size: 16px; cursor: pointer; 
+            color: white; border: none; border-radius: 8px; margin-bottom: 10px; font-weight: bold;
         }
-        .btn-primary { background-color: #007bff; }
-        .btn-primary:hover { background-color: #0056b3; }
+        .btn-primary { background-color: #0f9d58; } 
+        .btn-primary:hover { background-color: #0b7a44; }
         .btn-google { background-color: #4285F4; }
         .btn-google:hover { background-color: #357ae8; }
-        .btn-danger { background-color: #dc3545; }
-        .btn-danger:hover { background-color: #c82333; }
-        .toggle-text { text-align: center; color: #007bff; cursor: pointer; font-size: 14px; }
+        .toggle-text { text-align: center; color: #0f9d58; cursor: pointer; font-size: 14px; margin-top: 10px; }
         .toggle-text:hover { text-decoration: underline; }
-        .success-msg { color: #0f9d58; font-weight: bold; background: #e6f4ea; padding: 10px; border-radius: 4px; }
         
-        /* CSS class to control view toggling */
+        /* --- Main Marketplace View Styles --- */
+        #mainAppView { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100%; 
+            width: 100%;
+        }
+
+        /* 1. Top Bar (Search) */
+        .top-bar { 
+            padding: 15px 20px; 
+            background: white; 
+            border-bottom: 1px solid #eee;
+            position: sticky; 
+            top: 0; 
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+        }
+        .search-container {
+            width: 100%;
+            max-width: 800px; /* Limits search bar width on huge screens */
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: 1px solid #ddd;
+            background-color: #f8f9fa;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        .search-input:focus { border-color: #0f9d58; box-shadow: 0 0 5px rgba(15,157,88,0.2); }
+
+        /* 2. Middle Content (Product Grid) */
+        .middle-content { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px; 
+            background: #f4f4f9; 
+            display: flex;
+            justify-content: center;
+        }
+        .grid-container {
+            width: 100%;
+            max-width: 1200px; /* Prevents stretching too far on ultrawide monitors */
+        }
+        .product-grid { 
+            display: grid; 
+            /* THE RESPONSIVE MAGIC: Auto-fills columns based on screen width */
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            gap: 20px; 
+        }
+        .product-card { 
+            background: white; 
+            border-radius: 12px; 
+            padding: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.04); 
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .product-card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+        .product-card .img-placeholder { 
+            width: 100%; 
+            height: 160px; 
+            background: #e9ecef; 
+            border-radius: 8px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #adb5bd;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .product-card h3 { font-size: 16px; margin: 0 0 6px 0; color: #333; }
+        .product-card .condition { font-size: 13px; color: #888; margin-bottom: 10px; }
+        .product-card .price { color: #0f9d58; font-weight: bold; font-size: 18px; margin: 0; margin-top: auto; }
+
+        /* 3. Bottom Bar (Navigation) */
+        .bottom-nav { 
+            display: flex; 
+            justify-content: space-around; 
+            padding: 15px 0; 
+            background: white; 
+            border-top: 1px solid #eee;
+            position: sticky; 
+            bottom: 0; 
+            z-index: 10;
+        }
+        /* Keep bottom nav centered on large screens */
+        .nav-container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-around;
+            margin: 0 auto;
+        }
+        .nav-item { 
+            background: none; 
+            border: none; 
+            font-size: 15px; 
+            color: #adb5bd; 
+            cursor: pointer; 
+            font-weight: 600;
+            padding: 10px;
+        }
+        .nav-item.active { color: #0f9d58; }
+        .nav-item:hover { color: #0f9d58; }
+
+        /* Utility */
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Team Database Project</h1>
-
+    <div class="app-container">
+        
         <div id="authView">
-            <h2 id="formTitle">User Login</h2>
-            
-            <div class="input-group">
-                <input type="email" id="emailInput" placeholder="Enter email address" required>
+            <div class="auth-card">
+                <h1>Doormazon</h1>
+                <h2 id="formTitle">Student Login</h2>
+                
+                <div class="input-group">
+                    <input type="email" id="emailInput" placeholder="School email address" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="passwordInput" placeholder="Password" required>
+                </div>
+                
+                <button id="mainAuthBtn" class="btn btn-primary">Login</button>
+                <p class="toggle-text" id="toggleModeBtn">Don't have an account? Sign up</p>
+                
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                
+                <button id="googleLoginBtn" class="btn btn-google">Continue with Google</button>
             </div>
-            <div class="input-group">
-                <input type="password" id="passwordInput" placeholder="Enter password (min 6 characters)" required>
-            </div>
-            
-            <button id="mainAuthBtn" class="btn btn-primary">Login</button>
-            <p class="toggle-text" id="toggleModeBtn">Don't have an account? Click here to register</p>
-            
-            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
-            
-            <button id="googleLoginBtn" class="btn btn-google">Continue with Google</button>
         </div>
 
-        <div id="successView" class="hidden">
-            <h2>🎉 Login Successful!</h2>
-            <p class="success-msg">Welcome to the system. Your data has been synchronized.</p>
-            <div id="userInfo" style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; word-break: break-all;">
+        <div id="mainAppView" class="hidden">
+            
+            <div class="top-bar">
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Search for textbooks, monitors, chairs...">
                 </div>
-            <button id="logoutBtn" class="btn btn-danger">Logout</button>
+            </div>
+
+            <div class="middle-content">
+                <div class="grid-container">
+                    <div class="product-grid">
+                        <div class="product-card">
+                            <div class="img-placeholder">Image Here</div>
+                            <h3>Office Chair</h3>
+                            <div class="condition">Condition: Like New</div>
+                            <p class="price">$45.00</p>
+                        </div>
+                        <div class="product-card">
+                            <div class="img-placeholder">Image Here</div>
+                            <h3>Calculus Textbook</h3>
+                            <div class="condition">Condition: Used - Good</div>
+                            <p class="price">$15.00</p>
+                        </div>
+                        <div class="product-card">
+                            <div class="img-placeholder">Image Here</div>
+                            <h3>24" Dell Monitor</h3>
+                            <div class="condition">Condition: Excellent</div>
+                            <p class="price">$80.00</p>
+                        </div>
+                        <div class="product-card">
+                            <div class="img-placeholder">Image Here</div>
+                            <h3>Desk Lamp</h3>
+                            <div class="condition">Condition: Fair</div>
+                            <p class="price">$5.00</p>
+                        </div>
+                        <div class="product-card">
+                            <div class="img-placeholder">Image Here</div>
+                            <h3>Mini Fridge</h3>
+                            <div class="condition">Condition: Good</div>
+                            <p class="price">$55.00</p>
+                        </div>
+                        <div class="product-card">
+                            <div class="img-placeholder">Image Here</div>
+                            <h3>Microwave</h3>
+                            <div class="condition">Condition: Fair</div>
+                            <p class="price">$20.00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-nav">
+                <div class="nav-container">
+                    <button class="nav-item active" id="navHome">Home</button>
+                    <button class="nav-item" id="navSell">Sell Item</button>
+                    <button class="nav-item" id="navProfile">Profile</button>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -83,7 +272,7 @@
         } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-         const firebaseConfig = {
+        const firebaseConfig = {
             apiKey: "AIzaSyC3BrcypGhOEqP9wvu4PnBFlDmTmtKdFXc",
             authDomain: "group-10-570d5.firebaseapp.com",
             projectId: "group-10-570d5",
@@ -96,59 +285,48 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Get DOM elements
+        // DOM Elements
         const authView = document.getElementById('authView');
-        const successView = document.getElementById('successView');
+        const mainAppView = document.getElementById('mainAppView');
         const formTitle = document.getElementById('formTitle');
         const emailInput = document.getElementById('emailInput');
         const passwordInput = document.getElementById('passwordInput');
         const mainAuthBtn = document.getElementById('mainAuthBtn');
         const toggleModeBtn = document.getElementById('toggleModeBtn');
         const googleLoginBtn = document.getElementById('googleLoginBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const userInfoDiv = document.getElementById('userInfo');
+        
+        const navHome = document.getElementById('navHome');
+        const navSell = document.getElementById('navSell');
+        const navProfile = document.getElementById('navProfile');
 
-        let isLoginMode = true; // Tracks whether current mode is login or register
+        let isLoginMode = true;
 
-        // Toggle Login/Register UI
         toggleModeBtn.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
             if (isLoginMode) {
-                formTitle.innerText = "User Login";
+                formTitle.innerText = "Student Login";
                 mainAuthBtn.innerText = "Login";
-                toggleModeBtn.innerText = "Don't have an account? Click here to register";
+                toggleModeBtn.innerText = "Don't have an account? Sign up";
             } else {
-                formTitle.innerText = "Create New Account";
-                mainAuthBtn.innerText = "Register";
-                toggleModeBtn.innerText = "Already have an account? Click here to login";
+                formTitle.innerText = "Create Account";
+                mainAuthBtn.innerText = "Sign Up";
+                toggleModeBtn.innerText = "Already have an account? Login";
             }
         });
 
-        // Listen for system-level authentication state changes
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in: hide auth form, show success view
                 authView.classList.add('hidden');
-                successView.classList.remove('hidden');
-                
-                // Dynamically inject user data
-                userInfoDiv.innerHTML = `
-                    <p><strong>Email:</strong> ${user.email || 'Not provided'}</p>
-                    <p><strong>UID:</strong> ${user.uid}</p>
-                `;
-                
-                // Ensure user record exists in database
+                mainAppView.classList.remove('hidden');
                 saveUserToDatabase(user);
             } else {
-                // User is signed out: show auth form, hide success view
                 authView.classList.remove('hidden');
-                successView.classList.add('hidden');
+                mainAppView.classList.add('hidden');
                 emailInput.value = '';
                 passwordInput.value = '';
             }
         });
 
-        // Function to write data to Firestore
         async function saveUserToDatabase(user) {
             try {
                 const userDocRef = doc(db, "users", user.uid);
@@ -156,44 +334,37 @@
                     email: user.email,
                     lastLoginTime: new Date().toISOString()
                 }, { merge: true });
-                console.log("Database record synchronized.");
             } catch (error) {
-                console.error("Failed to write to database:", error);
+                console.error("Database error:", error);
             }
         }
 
-        // 1. Email Register/Login button click event
         mainAuthBtn.addEventListener('click', () => {
             const email = emailInput.value;
             const password = passwordInput.value;
-            
-            if (!email || !password) {
-                alert("Please enter both email and password!");
-                return;
-            }
+            if (!email || !password) return alert("Please enter credentials!");
 
             if (isLoginMode) {
-                // Execute login
                 signInWithEmailAndPassword(auth, email, password)
-                    .catch((error) => alert("Login failed: " + error.message));
+                    .catch(err => alert("Login Error: " + err.message));
             } else {
-                // Execute registration
                 createUserWithEmailAndPassword(auth, email, password)
-                    .catch((error) => alert("Registration failed: " + error.message));
+                    .catch(err => alert("Signup Error: " + err.message));
             }
         });
 
-        // 2. Google login event
         googleLoginBtn.addEventListener('click', () => {
             const provider = new GoogleAuthProvider();
-            signInWithPopup(auth, provider)
-                .catch((error) => alert("Google login failed: " + error.message));
+            signInWithPopup(auth, provider).catch(err => alert("Google Auth Error: " + err.message));
         });
 
-        // 3. Logout event
-        logoutBtn.addEventListener('click', () => {
-            signOut(auth).catch((error) => console.error("Logout failed:", error));
+        navProfile.addEventListener('click', () => {
+            const confirmLogout = confirm("Do you want to logout?");
+            if(confirmLogout) {
+                signOut(auth).catch(err => console.error("Logout error", err));
+            }
         });
+
     </script>
 </body>
 </html>
