@@ -1,17 +1,16 @@
 import { auth, db } from "./firebase-init.js";
-import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+// 新增了 query, where, collection, getDocs 用于查重
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 let mockVerificationCode = "";
 
-// 🎓 全新：大学品牌专属配色字典
-// 这里的颜色都是各大学官方的品牌色 (Brand Colors)
 const universityBranding = {
-    "cornell.edu": { name: "Cornell Student", bg: "#B31B1B", text: "#FFFFFF" }, // 康奈尔红
-    "columbia.edu": { name: "Columbia Student", bg: "#B9D9EB", text: "#002B7F" }, // 哥大蓝
-    "nyu.edu": { name: "NYU Student", bg: "#57068C", text: "#FFFFFF" }, // NYU紫
-    "utoronto.ca": { name: "U of T Student", bg: "#002A5C", text: "#FFFFFF" }, // 多伦多大学蓝
-    "ubc.ca": { name: "UBC Student", bg: "#002145", text: "#FFFFFF" }, // UBC深蓝
-    "mcgill.ca": { name: "McGill Student", bg: "#ED1B2F", text: "#FFFFFF" } // 麦吉尔红
+    "cornell.edu": { name: "Cornell Student", bg: "#B31B1B", text: "#FFFFFF" },
+    "columbia.edu": { name: "Columbia Student", bg: "#B9D9EB", text: "#002B7F" },
+    "nyu.edu": { name: "NYU Student", bg: "#57068C", text: "#FFFFFF" },
+    "utoronto.ca": { name: "U of T Student", bg: "#002A5C", text: "#FFFFFF" },
+    "ubc.ca": { name: "UBC Student", bg: "#002145", text: "#FFFFFF" },
+    "mcgill.ca": { name: "McGill Student", bg: "#ED1B2F", text: "#FFFFFF" }
 };
 
 export function initVerificationLogic() {
@@ -20,8 +19,8 @@ export function initVerificationLogic() {
 
     if (!sendCodeBtn || !verifyCodeBtn) return;
 
-    // 1. 发送验证码
-    sendCodeBtn.addEventListener('click', () => {
+    // 1. 发送验证码（加入查重拦截）
+    sendCodeBtn.addEventListener('click', async () => {
         const eduEmail = document.getElementById('eduEmailInput').value.toLowerCase().trim();
         const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ca)$/;
         
@@ -31,10 +30,23 @@ export function initVerificationLogic() {
         }
 
         const domain = eduEmail.split('@')[1];
-        
-        // 判断是否在我们的字典白名单中
         if (!universityBranding[domain]) {
             alert(`The domain "@${domain}" is not currently supported. Dormazon is expanding soon!`);
+            return;
+        }
+
+        // --- 核心防线：检查该邮箱是否已经被别的账号绑定 ---
+        try {
+            const q = query(collection(db, "users"), where("studentEmail", "==", eduEmail));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                alert(`The email ${eduEmail} is already linked to an existing Dormazon account. Please log in directly with that email!`);
+                return; // 立即拦截，不再发送验证码
+            }
+        } catch (error) {
+            console.error("Error checking email uniqueness:", error);
+            alert("System error. Please try again later.");
             return;
         }
 
@@ -52,18 +64,19 @@ export function initVerificationLogic() {
                 const eduEmail = document.getElementById('eduEmailInput').value.toLowerCase().trim();
                 const universityDomain = eduEmail.split('@')[1];
 
-                // 写入数据库
                 await setDoc(doc(db, "users", auth.currentUser.uid), {
                     isStudent: true,
                     studentEmail: eduEmail,
                     university: universityDomain
                 }, { merge: true });
 
-                // 验证成功后，立刻调用 UI 刷新函数应用专属 UI
                 applyStudentBadgeUI(universityDomain);
                 
+                // 将个人资料里显示的邮箱立刻改成验证成功的学校邮箱
+                document.getElementById('profileEmail').innerText = eduEmail;
+                
                 alert("🎉 Verification successful! Your exclusive university badge has been unlocked.");
-                mockVerificationCode = ""; // 清空内存验证码
+                mockVerificationCode = ""; 
 
             } catch (error) {
                 console.error("Fatal Database Error:", error);
@@ -75,7 +88,6 @@ export function initVerificationLogic() {
     });
 }
 
-// 供 app.js 每次加载 Profile 时调用的 UI 刷新函数
 export async function checkStudentStatusUI() {
     const user = auth.currentUser;
     if (!user) return;
@@ -83,7 +95,6 @@ export async function checkStudentStatusUI() {
     try {
         const docSnap = await getDoc(doc(db, "users", user.uid));
         if (docSnap.exists() && docSnap.data().isStudent) {
-            // 如果是学生，传入他数据库里存的大学域名来渲染专属 UI
             applyStudentBadgeUI(docSnap.data().university);
         } else {
             document.getElementById('verifySection').classList.remove('hidden');
@@ -94,21 +105,17 @@ export async function checkStudentStatusUI() {
     }
 }
 
-// 核心：动态修改徽章样式 (Dynamic Styling)
 function applyStudentBadgeUI(domain) {
     const badge = document.getElementById('studentBadge');
     const verifySection = document.getElementById('verifySection');
     
-    // 从字典中获取该大学的专属数据。如果没有匹配到，提供一个默认的后备样式 (Fallback)
     const brandData = universityBranding[domain] || { name: "Verified Student", bg: "#e6f4ea", text: "#0f9d58" };
 
-    // 注入专属文本和官方颜色
     badge.innerText = `🎓 ${brandData.name}`;
     badge.style.backgroundColor = brandData.bg;
     badge.style.color = brandData.text;
     badge.style.border = `1px solid ${brandData.bg}`;
 
-    // 隐藏验证框，显示徽章
     verifySection.classList.add('hidden');
     badge.classList.remove('hidden');
 }

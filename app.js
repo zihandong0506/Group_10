@@ -2,11 +2,9 @@ import { auth, db } from "./firebase-init.js";
 import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, setDoc, getDoc, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// 引入两块独立的模块逻辑
 import { initProfileLogic } from "./profile.js";
 import { initVerificationLogic, checkStudentStatusUI } from "./verification.js";
 
-// Views
 const authView = document.getElementById('authView');
 const homeView = document.getElementById('homeView');
 const sellView = document.getElementById('sellView');
@@ -14,12 +12,10 @@ const profileView = document.getElementById('profileView');
 const bottomNav = document.getElementById('bottomNav');
 const productGrid = document.getElementById('productGrid');
 
-// Nav
 const navHome = document.getElementById('navHome');
 const navSell = document.getElementById('navSell');
 const navProfile = document.getElementById('navProfile');
 
-// Auth Form
 const formTitle = document.getElementById('formTitle');
 const emailInput = document.getElementById('emailInput');
 const passwordInput = document.getElementById('passwordInput');
@@ -29,7 +25,6 @@ const googleLoginBtn = document.getElementById('googleLoginBtn');
 
 let isLoginMode = true;
 
-// ⚡️ 启动独立模块的逻辑
 initProfileLogic();
 initVerificationLogic();
 
@@ -80,14 +75,34 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
+// --- 核心更新：注册/登录时自动进行学生认证 ---
 async function saveUserToDatabase(user) {
     try {
         const userRef = doc(db, "users", user.uid);
-        await setDoc(userRef, {
+        const docSnap = await getDoc(userRef);
+        
+        // 基础资料
+        let userData = {
             email: user.email,
             displayName: user.displayName || user.email.split('@')[0],
             lastLoginTime: new Date().toISOString()
-        }, { merge: true });
+        };
+
+        // 如果用户是第一次用学校邮箱注册/登录，直接自动颁发学生认证！
+        const emailStr = user.email.toLowerCase().trim();
+        const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ca)$/;
+        const domain = emailStr.split('@')[1];
+        const allowedDomains = ["cornell.edu", "columbia.edu", "nyu.edu", "utoronto.ca", "ubc.ca", "mcgill.ca"];
+
+        // 仅当用户当前没有 isStudent 标签，且邮箱符合规定时执行自动认证
+        if ((!docSnap.exists() || !docSnap.data().isStudent) && regex.test(emailStr) && allowedDomains.includes(domain)) {
+            userData.isStudent = true;
+            userData.studentEmail = emailStr;
+            userData.university = domain;
+            console.log("Auto-verified student via login email!");
+        }
+
+        await setDoc(userRef, userData, { merge: true });
     } catch (error) {
         console.error("Database error:", error);
     }
@@ -125,31 +140,25 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
     }
 });
 
-// --- 核心修改点：优先读取并显示学校邮箱 ---
 async function loadProfileData() {
     const user = auth.currentUser;
     if (!user) return;
     
-    // 默认显示用户名和普通登录邮箱
     document.getElementById('profileName').innerText = user.displayName || user.email.split('@')[0];
     document.getElementById('profileEmail').innerText = user.email;
 
-    // 如果有头像链接，渲染图片
     if (user.photoURL) {
         document.getElementById('userAvatar').innerHTML = `<img src="${user.photoURL}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
     } else {
         document.getElementById('userAvatar').innerHTML = '👤';
     }
 
-    // 从数据库拉取额外数据
     const docSnap = await getDoc(doc(db, "users", user.uid));
     
     if (docSnap.exists() && docSnap.data().isStudent) {
-        // 如果是认证学生，强行把显示的邮箱替换成数据库里存的 studentEmail
         document.getElementById('profileEmail').innerText = docSnap.data().studentEmail;
     }
 
-    // 调用 verification.js 里的 UI 刷新逻辑处理小标
     await checkStudentStatusUI();
 }
 
