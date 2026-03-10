@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Campus Thrift - Second Hand Market</title>
+    <title>Dormazon - Student Second Hand Market</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,10 +11,10 @@
         
         <div id="authView">
             <div class="auth-card">
-                <h1>Campus Thrift</h1>
+                <h1>Dormazon</h1>
                 <h2 id="formTitle">Student Login</h2>
                 <div class="input-group">
-                    <input type="email" id="emailInput" placeholder="School email address" required>
+                    <input type="email" id="emailInput" placeholder="Email address" required>
                 </div>
                 <div class="input-group">
                     <input type="password" id="passwordInput" placeholder="Password" required>
@@ -49,15 +49,15 @@
                 <div class="content-container">
                     <div class="sell-form-card">
                         <div class="input-group">
-                            <label style="display:block; margin-bottom:5px; color:#555; font-size:14px;">Item Title</label>
+                            <label class="form-label">Item Title</label>
                             <input type="text" id="postTitle" placeholder="e.g. Calculus Textbook">
                         </div>
                         <div class="input-group">
-                            <label style="display:block; margin-bottom:5px; color:#555; font-size:14px;">Price ($)</label>
+                            <label class="form-label">Price ($)</label>
                             <input type="number" id="postPrice" placeholder="e.g. 15.00" step="0.01">
                         </div>
                         <div class="input-group">
-                            <label style="display:block; margin-bottom:5px; color:#555; font-size:14px;">Condition</label>
+                            <label class="form-label">Condition</label>
                             <select id="postCondition">
                                 <option value="Brand New">Brand New</option>
                                 <option value="Like New">Like New</option>
@@ -67,6 +67,72 @@
                         </div>
                         <button id="submitPostBtn" class="btn btn-primary" style="margin-top:15px;">Publish Item</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="profileView" class="app-view hidden">
+            <div class="top-bar">
+                <h2 style="margin:0; font-size:18px;">My Profile</h2>
+            </div>
+            <div class="middle-content" style="padding: 15px;">
+                <div class="content-container" style="max-width: 600px; margin: 0 auto;">
+                    
+                    <div class="profile-header-card">
+                        <div class="avatar-circle" id="userAvatar">👤</div>
+                        <div class="profile-info-text">
+                            <h3 id="profileName" style="margin:0 0 5px 0;">Loading...</h3>
+                            <p id="profileEmail" class="text-muted" style="margin:0 0 8px 0; font-size:14px;"></p>
+                            <span id="studentBadge" class="badge badge-student hidden">🎓 Verified Student</span>
+                        </div>
+                        <button class="edit-btn">Edit</button>
+                    </div>
+
+                    <div id="verifySection" class="profile-menu-card" style="border: 2px dashed #0f9d58; background: #fdfdfd;">
+                        <h4 style="margin:0 0 10px 0; color: #0f9d58;">Get Verified!</h4>
+                        <p class="text-muted" style="font-size:13px; margin-bottom:15px;">
+                            Enter your .edu or .ca email to unlock selling privileges.
+                        </p>
+                        <div class="input-group">
+                            <input type="email" id="eduEmailInput" placeholder="e.g. netid@cornell.edu">
+                        </div>
+                        <button id="sendCodeBtn" class="btn btn-primary" style="padding: 10px;">Send Code</button>
+
+                        <div id="codeSection" class="hidden" style="margin-top:15px;">
+                            <div class="input-group">
+                                <input type="text" id="codeInput" placeholder="Enter 6-digit code">
+                            </div>
+                            <button id="verifyCodeBtn" class="btn btn-primary" style="padding: 10px;">Verify Code</button>
+                        </div>
+                    </div>
+
+                    <div class="profile-menu-card">
+                        <div class="menu-item">
+                            <span class="menu-icon">📍</span>
+                            <span class="menu-text">Address Book</span>
+                            <span class="menu-arrow">›</span>
+                        </div>
+                        <div class="menu-item">
+                            <span class="menu-icon">💳</span>
+                            <span class="menu-text">Payment Methods</span>
+                            <span class="menu-arrow">›</span>
+                        </div>
+                    </div>
+
+                    <div class="profile-menu-card">
+                        <div class="menu-item">
+                            <span class="menu-icon">📦</span>
+                            <span class="menu-text">Purchased Inventory</span>
+                            <span class="menu-arrow">›</span>
+                        </div>
+                        <div class="menu-item">
+                            <span class="menu-icon">🏷️</span>
+                            <span class="menu-text">My Listings (Sold & Selling)</span>
+                            <span class="menu-arrow">›</span>
+                        </div>
+                    </div>
+
+                    <button id="logoutBtn" class="btn btn-danger" style="margin-top:20px;">Logout from Dormazon</button>
                 </div>
             </div>
         </div>
