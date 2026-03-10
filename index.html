@@ -107,7 +107,7 @@
                     </div>
 
                     <div class="profile-menu-card">
-                        <div class="menu-item">
+                        <div class="menu-item" id="addressBookBtn">
                             <span class="menu-icon">📍</span>
                             <span class="menu-text">Address Book</span>
                             <span class="menu-arrow">›</span>
@@ -142,6 +142,25 @@
                 <button class="nav-item active" id="navHome">Home</button>
                 <button class="nav-item" id="navSell">Sell Item</button>
                 <button class="nav-item" id="navProfile">Profile</button>
+            </div>
+        </div>
+
+        <div id="addressModal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <h3 style="margin-top:0;">Shipping Address</h3>
+                <div class="input-group">
+                    <input type="text" id="addrStreet" placeholder="Street Address (e.g. 123 College Ave)">
+                </div>
+                <div class="input-group">
+                    <input type="text" id="addrCity" placeholder="City">
+                </div>
+                <div class="input-group">
+                    <input type="text" id="addrZip" placeholder="Zip / Postal Code">
+                </div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button id="closeAddressModal" class="btn" style="background:#eee; color:#333; margin-bottom:0;">Cancel</button>
+                    <button id="saveAddressBtn" class="btn btn-primary" style="margin-bottom:0;">Save Address</button>
+                </div>
             </div>
         </div>
 

@@ -1,19 +1,10 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { auth, db } from "./firebase-init.js";
+import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { doc, setDoc, getDoc, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyC3BrcypGhOEqP9wvu4PnBFlDmTmtKdFXc",
-    authDomain: "group-10-570d5.firebaseapp.com",
-    projectId: "group-10-570d5",
-    storageBucket: "group-10-570d5.firebasestorage.app",
-    messagingSenderId: "330776905308",
-    appId: "1:330776905308:web:251f0f1584e25925070899"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// 引入模块化逻辑
+import { initProfileLogic } from "./profile.js";
+import { initVerificationLogic } from "./verification.js";
 
 // Views
 const authView = document.getElementById('authView');
@@ -38,6 +29,11 @@ const googleLoginBtn = document.getElementById('googleLoginBtn');
 
 let isLoginMode = true;
 
+// --- 激活外部模块 ---
+initProfileLogic();
+initVerificationLogic();
+
+// --- 登录与注册逻辑 ---
 toggleModeBtn.addEventListener('click', () => {
     isLoginMode = !isLoginMode;
     if (isLoginMode) {
@@ -72,7 +68,6 @@ onAuthStateChanged(auth, async (user) => {
         authView.classList.add('hidden');
         homeView.classList.remove('hidden');
         bottomNav.classList.remove('hidden');
-        
         await saveUserToDatabase(user);
         fetchProductsFromDatabase();
     } else {
@@ -89,7 +84,6 @@ onAuthStateChanged(auth, async (user) => {
 async function saveUserToDatabase(user) {
     try {
         const userRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(userRef);
         await setDoc(userRef, {
             email: user.email,
             displayName: user.displayName || user.email.split('@')[0],
@@ -100,7 +94,7 @@ async function saveUserToDatabase(user) {
     }
 }
 
-// --- Navigation ---
+// --- 视图切换逻辑 ---
 function switchView(viewName) {
     homeView.classList.add('hidden');
     sellView.classList.add('hidden');
@@ -133,7 +127,27 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
     }
 });
 
-// --- Products Logic ---
+// --- 读取和加载个人信息 ---
+async function loadProfileData() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    document.getElementById('profileName').innerText = user.displayName || user.email.split('@')[0];
+    document.getElementById('profileEmail').innerText = user.email;
+
+    const docSnap = await getDoc(doc(db, "users", user.uid));
+    
+    // 根据数据库里的 isStudent 状态，决定显示徽章还是验证框
+    if (docSnap.exists() && docSnap.data().isStudent) {
+        document.getElementById('verifySection').classList.add('hidden');
+        document.getElementById('studentBadge').classList.remove('hidden');
+    } else {
+        document.getElementById('verifySection').classList.remove('hidden');
+        document.getElementById('studentBadge').classList.add('hidden');
+    }
+}
+
+// --- 商品系统逻辑 ---
 async function fetchProductsFromDatabase() {
     try {
         const querySnapshot = await getDocs(collection(db, "products"));
@@ -160,9 +174,8 @@ async function fetchProductsFromDatabase() {
 const submitPostBtn = document.getElementById('submitPostBtn');
 if (submitPostBtn) {
     submitPostBtn.addEventListener('click', async () => {
-        const userRef = doc(db, "users", auth.currentUser.uid);
-        const docSnap = await getDoc(userRef);
-        if (!docSnap.data().isStudent) {
+        const docSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+        if (!docSnap.exists() || !docSnap.data().isStudent) {
             alert("Only verified students can post items! Please go to your Profile to verify your .edu email.");
             switchView('profile');
             return;
@@ -177,7 +190,6 @@ if (submitPostBtn) {
         try {
             submitPostBtn.innerText = "Publishing...";
             submitPostBtn.disabled = true;
-
             await addDoc(collection(db, "products"), {
                 title: title,
                 price: price,
@@ -185,7 +197,6 @@ if (submitPostBtn) {
                 sellerId: auth.currentUser.uid,
                 createdAt: new Date().toISOString()
             });
-
             alert("Item published successfully!");
             document.getElementById('postTitle').value = '';
             document.getElementById('postPrice').value = '';
@@ -198,78 +209,3 @@ if (submitPostBtn) {
         }
     });
 }
-
-// --- Student Verification Logic ---
-let mockVerificationCode = "";
-
-async function loadProfileData() {
-    const user = auth.currentUser;
-    if (!user) return;
-    
-    document.getElementById('profileName').innerText = user.displayName || user.email.split('@')[0];
-    document.getElementById('profileEmail').innerText = user.email;
-
-    const docSnap = await getDoc(doc(db, "users", user.uid));
-    const userData = docSnap.data();
-
-    if (userData && userData.isStudent) {
-        // UI Fix: Explicitly enforce UI changes when verified
-        document.getElementById('verifySection').classList.add('hidden');
-        document.getElementById('studentBadge').classList.remove('hidden');
-    } else {
-        document.getElementById('verifySection').classList.remove('hidden');
-        document.getElementById('studentBadge').classList.add('hidden');
-    }
-}
-
-document.getElementById('sendCodeBtn').addEventListener('click', () => {
-    const eduEmail = document.getElementById('eduEmailInput').value.toLowerCase().trim();
-    const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ca)$/;
-    
-    if (!regex.test(eduEmail)) {
-        alert("Please enter a valid North American university email (.edu or .ca).");
-        return;
-    }
-
-    const domain = eduEmail.split('@')[1];
-    const allowedDomains = ["cornell.edu", "columbia.edu", "nyu.edu", "utoronto.ca", "ubc.ca", "mcgill.ca"];
-
-    if (!allowedDomains.includes(domain)) {
-        alert(`The domain "@${domain}" is not currently supported. Dormazon is expanding soon!`);
-        return;
-    }
-
-    mockVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    alert(`[PROTOTYPE SIMULATION]\n\nAn email has been "sent" to ${eduEmail}.\n\nYour verification code is: ${mockVerificationCode}`);
-    document.getElementById('codeSection').classList.remove('hidden');
-});
-
-document.getElementById('verifyCodeBtn').addEventListener('click', async () => {
-    const inputCode = document.getElementById('codeInput').value.trim(); // Added trim to remove accidental spaces
-    
-    if (inputCode === mockVerificationCode && inputCode !== "") {
-        try {
-            const eduEmail = document.getElementById('eduEmailInput').value.toLowerCase().trim();
-            const universityDomain = eduEmail.split('@')[1];
-
-            // 1. Write to DB
-            await setDoc(doc(db, "users", auth.currentUser.uid), {
-                isStudent: true,
-                studentEmail: eduEmail,
-                university: universityDomain
-            }, { merge: true });
-
-            // 2. EXPLICIT UI FIX: Force the box to hide immediately without waiting for DB reload
-            document.getElementById('verifySection').classList.add('hidden');
-            document.getElementById('studentBadge').classList.remove('hidden');
-            
-            alert("Verification successful! You can now sell items.");
-
-        } catch (error) {
-            console.error("Error updating verification status:", error);
-            alert("Database error during verification.");
-        }
-    } else {
-        alert("Incorrect verification code. Please try again.");
-    }
-});
