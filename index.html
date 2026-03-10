@@ -165,7 +165,28 @@
         </div>
 
     </div>
+    <div id="editProfileModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3 style="margin-top:0;">Edit Profile</h3>
+            
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div class="avatar-circle" id="previewAvatar" style="margin: 0 auto; cursor: pointer; border: 2px dashed #ccc;">👤</div>
+                <p class="text-muted" style="font-size: 12px; margin-top: 8px;">Click image to upload new avatar</p>
+                <input type="file" id="avatarInput" accept="image/*" class="hidden">
+            </div>
 
+            <div class="input-group">
+                <label class="form-label">Display Name</label>
+                <input type="text" id="editNameInput" placeholder="Enter your name">
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button id="closeEditProfileModal" class="btn" style="background:#eee; color:#333; margin-bottom:0;">Cancel</button>
+                <button id="saveProfileBtn" class="btn btn-primary" style="margin-bottom:0;">Save Changes</button>
+            </div>
+        </div>
+    </div>
     <script type="module" src="app.js"></script>
 </body>
 </html>
+

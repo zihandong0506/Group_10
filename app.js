@@ -2,9 +2,9 @@ import { auth, db } from "./firebase-init.js";
 import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, setDoc, getDoc, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// 引入模块化逻辑
+// 引入两块独立的模块逻辑
 import { initProfileLogic } from "./profile.js";
-import { initVerificationLogic } from "./verification.js";
+import { initVerificationLogic, checkStudentStatusUI } from "./verification.js";
 
 // Views
 const authView = document.getElementById('authView');
@@ -29,11 +29,10 @@ const googleLoginBtn = document.getElementById('googleLoginBtn');
 
 let isLoginMode = true;
 
-// --- 激活外部模块 ---
+// ⚡️ 启动独立模块的逻辑
 initProfileLogic();
 initVerificationLogic();
 
-// --- 登录与注册逻辑 ---
 toggleModeBtn.addEventListener('click', () => {
     isLoginMode = !isLoginMode;
     if (isLoginMode) {
@@ -94,7 +93,6 @@ async function saveUserToDatabase(user) {
     }
 }
 
-// --- 视图切换逻辑 ---
 function switchView(viewName) {
     homeView.classList.add('hidden');
     sellView.classList.add('hidden');
@@ -127,27 +125,34 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
     }
 });
 
-// --- 读取和加载个人信息 ---
+// --- 核心修改点：优先读取并显示学校邮箱 ---
 async function loadProfileData() {
     const user = auth.currentUser;
     if (!user) return;
     
+    // 默认显示用户名和普通登录邮箱
     document.getElementById('profileName').innerText = user.displayName || user.email.split('@')[0];
     document.getElementById('profileEmail').innerText = user.email;
 
+    // 如果有头像链接，渲染图片
+    if (user.photoURL) {
+        document.getElementById('userAvatar').innerHTML = `<img src="${user.photoURL}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+    } else {
+        document.getElementById('userAvatar').innerHTML = '👤';
+    }
+
+    // 从数据库拉取额外数据
     const docSnap = await getDoc(doc(db, "users", user.uid));
     
-    // 根据数据库里的 isStudent 状态，决定显示徽章还是验证框
     if (docSnap.exists() && docSnap.data().isStudent) {
-        document.getElementById('verifySection').classList.add('hidden');
-        document.getElementById('studentBadge').classList.remove('hidden');
-    } else {
-        document.getElementById('verifySection').classList.remove('hidden');
-        document.getElementById('studentBadge').classList.add('hidden');
+        // 如果是认证学生，强行把显示的邮箱替换成数据库里存的 studentEmail
+        document.getElementById('profileEmail').innerText = docSnap.data().studentEmail;
     }
+
+    // 调用 verification.js 里的 UI 刷新逻辑处理小标
+    await checkStudentStatusUI();
 }
 
-// --- 商品系统逻辑 ---
 async function fetchProductsFromDatabase() {
     try {
         const querySnapshot = await getDocs(collection(db, "products"));
